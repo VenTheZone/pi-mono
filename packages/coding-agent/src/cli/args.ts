@@ -179,8 +179,9 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 	return result;
 }
 
-export function printHelp(): void {
-	console.log(`${chalk.bold(APP_NAME)} - AI coding assistant with read, bash, edit, write tools
+export function printHelp(useStderr = false): void {
+	const log = useStderr ? console.error : console.log;
+	log(`${chalk.bold(APP_NAME)} - AI coding assistant with read, bash, edit, write tools
 
 ${chalk.bold("Usage:")}
   ${APP_NAME} [options] [@files...] [messages...]

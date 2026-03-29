@@ -8,7 +8,14 @@ import { getLanguageFromPath, highlightCode } from "../../modes/interactive/them
 import type { ToolDefinition, ToolRenderResultOptions } from "../extensions/types.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import { resolveToCwd } from "./path-utils.js";
-import { invalidArgText, normalizeDisplayText, replaceTabs, shortenPath, str } from "./render-utils.js";
+import {
+	getToolStatusIcon,
+	invalidArgText,
+	normalizeDisplayText,
+	replaceTabs,
+	shortenPath,
+	str,
+} from "./render-utils.js";
 import { wrapToolDefinition } from "./tool-definition-wrapper.js";
 
 const writeSchema = Type.Object({
@@ -252,13 +259,14 @@ export function createWriteToolDefinition(
 			} else {
 				component.cache = undefined;
 			}
+			const icon = getToolStatusIcon(context.isPartial, context.isError, theme);
 			component.setText(
-				formatWriteCall(
+				`${icon} ${formatWriteCall(
 					renderArgs,
 					{ expanded: context.expanded, isPartial: context.isPartial },
 					theme,
 					component.cache,
-				),
+				)}`,
 			);
 			return component;
 		},

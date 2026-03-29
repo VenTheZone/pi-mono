@@ -1,6 +1,50 @@
 import type { AssistantMessage } from "@mariozechner/pi-ai";
-import { Container, Markdown, type MarkdownTheme, Spacer, Text } from "@mariozechner/pi-tui";
+import { Container, Markdown, type MarkdownTheme, Spacer, Text, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 import { getMarkdownTheme, theme } from "../theme/theme.js";
+
+/**
+ * Component that renders thinking content with a left border.
+ * Styled like opencode's ReasoningPart with a vertical bar on the left.
+ */
+class ThinkingBlock extends Container {
+	private content: string;
+	private borderColor: (text: string) => string;
+
+	constructor(content: string, borderColor: (text: string) => string) {
+		super();
+		this.content = content;
+		this.borderColor = borderColor;
+	}
+
+	override render(width: number): string[] {
+		// Reserve 2 chars for border + space
+		const contentWidth = Math.max(1, width - 2);
+		const borderChar = this.borderColor("│");
+
+		// Wrap the content to the available width
+		const wrappedLines = wrapTextWithAnsi(`_Thinking:_ ${this.content}`, contentWidth);
+
+		// Prepend border to each line
+		return wrappedLines.map((line) => `${borderChar} ${theme.fg("thinkingText", theme.italic(line))}`);
+	}
+
+	override invalidate(): void {
+		// No caching, re-render each time
+	}
+}
+
+/**
+ * Format duration in seconds to human-readable string.
+ * Shows seconds if < 1 minute, otherwise mm:ss.
+ */
+function formatDuration(seconds: number): string {
+	if (seconds < 60) {
+		return `${seconds.toFixed(1)}s`;
+	}
+	const mins = Math.floor(seconds / 60);
+	const secs = Math.floor(seconds % 60);
+	return `${mins}m ${secs}s`;
+}
 
 /**
  * Component that renders a complete assistant message
@@ -10,6 +54,8 @@ export class AssistantMessageComponent extends Container {
 	private hideThinkingBlock: boolean;
 	private markdownTheme: MarkdownTheme;
 	private lastMessage?: AssistantMessage;
+	private showEndMarker = false;
+	private userTimestamp?: number;
 
 	constructor(
 		message?: AssistantMessage,
@@ -27,6 +73,18 @@ export class AssistantMessageComponent extends Container {
 
 		if (message) {
 			this.updateContent(message);
+		}
+	}
+
+	/**
+	 * Enable message end marker showing model info and duration.
+	 * @param userTimestamp - Timestamp of the preceding user message (for duration calculation)
+	 */
+	setEndMarkerEnabled(enabled: boolean, userTimestamp?: number): void {
+		this.showEndMarker = enabled;
+		this.userTimestamp = userTimestamp;
+		if (this.lastMessage) {
+			this.updateContent(this.lastMessage);
 		}
 	}
 
@@ -63,7 +121,7 @@ export class AssistantMessageComponent extends Container {
 				// Set paddingY=0 to avoid extra spacing before tool executions
 				this.contentContainer.addChild(new Markdown(content.text.trim(), 1, 0, this.markdownTheme));
 			} else if (content.type === "thinking" && content.thinking.trim()) {
-				// Add spacing only when another visible assistant content block follows.
+				// Add spacing only when another visible assistant content follows.
 				// This avoids a superfluous blank line before separately-rendered tool execution blocks.
 				const hasVisibleContentAfter = message.content
 					.slice(i + 1)
@@ -71,18 +129,14 @@ export class AssistantMessageComponent extends Container {
 
 				if (this.hideThinkingBlock) {
 					// Show static "Thinking..." label when hidden
-					this.contentContainer.addChild(new Text(theme.italic(theme.fg("thinkingText", "Thinking...")), 1, 0));
+					this.contentContainer.addChild(new Text(theme.fg("thinkingText", theme.italic("Thinking...")), 1, 0));
 					if (hasVisibleContentAfter) {
 						this.contentContainer.addChild(new Spacer(1));
 					}
 				} else {
-					// Thinking traces in thinkingText color, italic
-					this.contentContainer.addChild(
-						new Markdown(content.thinking.trim(), 1, 0, this.markdownTheme, {
-							color: (text: string) => theme.fg("thinkingText", text),
-							italic: true,
-						}),
-					);
+					// Thinking block with left border like opencode
+					this.contentContainer.addChild(new Spacer(1));
+					this.contentContainer.addChild(new ThinkingBlock(content.thinking.trim(), (s) => theme.fg("muted", s)));
 					if (hasVisibleContentAfter) {
 						this.contentContainer.addChild(new Spacer(1));
 					}
@@ -110,6 +164,27 @@ export class AssistantMessageComponent extends Container {
 				this.contentContainer.addChild(new Spacer(1));
 				this.contentContainer.addChild(new Text(theme.fg("error", `Error: ${errorMsg}`), 1, 0));
 			}
+		}
+
+		// Render end marker if enabled (shows model ID and response duration)
+		if (this.showEndMarker && message.timestamp && message.model) {
+			this.contentContainer.addChild(new Spacer(1));
+
+			// Calculate duration from user message to assistant completion
+			let durationText = "";
+			if (this.userTimestamp && message.timestamp) {
+				const durationSeconds = (message.timestamp - this.userTimestamp) / 1000;
+				if (durationSeconds > 0) {
+					durationText = ` · ${formatDuration(durationSeconds)}`;
+				}
+			}
+
+			// Format: ▣ modelID · duration
+			const marker = theme.fg("accent", "▣");
+			const modelId = theme.fg("text", message.model);
+			const duration = durationText ? theme.fg("muted", durationText) : "";
+
+			this.contentContainer.addChild(new Text(`${marker} ${modelId}${duration}`, 1, 0));
 		}
 	}
 }

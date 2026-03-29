@@ -116,8 +116,23 @@ export class ToolExecutionComponent extends Container {
 		};
 	}
 
+	private getStatusIcon(): string {
+		if (this.isPartial) {
+			// Pending - show animated dots indicator
+			return theme.fg("muted", "⋯");
+		}
+		if (this.result?.isError) {
+			// Error
+			return theme.fg("error", "⚠");
+		}
+		// Success
+		return theme.fg("success", "✓");
+	}
+
 	private createCallFallback(): Component {
-		return new Text(theme.fg("toolTitle", theme.bold(this.toolName)), 0, 0);
+		const icon = this.getStatusIcon();
+		const name = theme.fg("toolTitle", theme.bold(this.toolName));
+		return new Text(`${icon} ${name}`, 0, 0);
 	}
 
 	private createResultFallback(): Component | undefined {

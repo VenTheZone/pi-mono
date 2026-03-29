@@ -639,7 +639,21 @@ export async function main(args: string[]) {
 	// First pass: parse args to get --extension paths
 	const firstPass = parseArgs(args);
 	time("parseArgs.firstPass");
+
+	// Determine if stdout should be taken over (non-interactive modes)
 	const shouldTakeOverStdout = firstPass.mode !== undefined || firstPass.print || !process.stdin.isTTY;
+
+	// Handle --help and --version early, before loading resources
+	if (firstPass.version) {
+		console.log(VERSION);
+		process.exit(0);
+	}
+
+	if (firstPass.help) {
+		printHelp(shouldTakeOverStdout);
+		process.exit(0);
+	}
+
 	if (shouldTakeOverStdout) {
 		takeOverStdout();
 	}
@@ -714,7 +728,7 @@ export async function main(args: string[]) {
 	}
 
 	if (parsed.help) {
-		printHelp();
+		printHelp(shouldTakeOverStdout);
 		process.exit(0);
 	}
 

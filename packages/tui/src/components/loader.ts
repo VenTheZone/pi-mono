@@ -9,15 +9,18 @@ export class Loader extends Text {
 	private currentFrame = 0;
 	private intervalId: NodeJS.Timeout | null = null;
 	private ui: TUI | null = null;
+	private animationsEnabled = true;
 
 	constructor(
 		ui: TUI,
 		private spinnerColorFn: (str: string) => string,
 		private messageColorFn: (str: string) => string,
 		private message: string = "Loading...",
+		animationsEnabled: boolean = true,
 	) {
 		super("", 1, 0);
 		this.ui = ui;
+		this.animationsEnabled = animationsEnabled;
 		this.start();
 	}
 
@@ -27,10 +30,12 @@ export class Loader extends Text {
 
 	start() {
 		this.updateDisplay();
-		this.intervalId = setInterval(() => {
-			this.currentFrame = (this.currentFrame + 1) % this.frames.length;
-			this.updateDisplay();
-		}, 80);
+		if (this.animationsEnabled) {
+			this.intervalId = setInterval(() => {
+				this.currentFrame = (this.currentFrame + 1) % this.frames.length;
+				this.updateDisplay();
+			}, 80);
+		}
 	}
 
 	stop() {
@@ -45,8 +50,22 @@ export class Loader extends Text {
 		this.updateDisplay();
 	}
 
+	setAnimationsEnabled(enabled: boolean) {
+		this.animationsEnabled = enabled;
+		if (enabled && !this.intervalId) {
+			this.intervalId = setInterval(() => {
+				this.currentFrame = (this.currentFrame + 1) % this.frames.length;
+				this.updateDisplay();
+			}, 80);
+		} else if (!enabled && this.intervalId) {
+			clearInterval(this.intervalId);
+			this.intervalId = null;
+		}
+		this.updateDisplay();
+	}
+
 	private updateDisplay() {
-		const frame = this.frames[this.currentFrame];
+		const frame = this.animationsEnabled ? this.frames[this.currentFrame] : "⋯";
 		this.setText(`${this.spinnerColorFn(frame)} ${this.messageColorFn(this.message)}`);
 		if (this.ui) {
 			this.ui.requestRender();

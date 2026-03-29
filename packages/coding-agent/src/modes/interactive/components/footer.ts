@@ -16,6 +16,37 @@ function sanitizeStatusText(text: string): string {
 }
 
 /**
+ * Check if status text indicates an error state.
+ * Looks for common error indicators in the text.
+ */
+function isErrorStatus(text: string): boolean {
+	const lower = text.toLowerCase();
+	return (
+		lower.includes("error") ||
+		lower.includes("failed") ||
+		lower.includes("disconnected") ||
+		lower.includes("unavailable") ||
+		lower.includes("crashed")
+	);
+}
+
+/**
+ * Check if status text indicates a success/active state.
+ * Looks for positive status indicators.
+ */
+function isSuccessStatus(text: string): boolean {
+	const lower = text.toLowerCase();
+	return (
+		lower.includes("connected") ||
+		lower.includes("running") ||
+		lower.includes("active") ||
+		lower.includes("ready") ||
+		lower.includes("started") ||
+		/\d+\s+(server|servers|connection|connections)/.test(lower)
+	);
+}
+
+/**
  * Format token counts (similar to web-ui)
  */
 function formatTokens(count: number): string {
@@ -56,6 +87,35 @@ export class FooterComponent implements Component {
 	 */
 	dispose(): void {
 		// Git watcher cleanup handled by provider
+	}
+
+	/**
+	 * Format extension status with colored indicator dot.
+	 * - ⊙ (circled dot) for MCP/external services
+	 * - • (bullet) for general status indicators
+	 * Colors: success (green) for connected, error (red) for errors, dim (gray) otherwise
+	 */
+	private formatStatusWithDot(key: string, text: string): string {
+		const sanitized = sanitizeStatusText(text);
+
+		// Determine which symbol to use: ⊙ for MCP/external services, • for others
+		const isMcpKey = key.toLowerCase().includes("mcp") || key.toLowerCase().includes("server");
+		const symbol = isMcpKey ? "⊙" : "•";
+
+		// Strip ANSI codes to analyze plain text
+		const plainText = sanitized.replace(/\x1b\[[0-9;]*m/g, "");
+
+		// Determine color based on status text
+		let coloredDot: string;
+		if (isErrorStatus(plainText)) {
+			coloredDot = theme.fg("error", symbol);
+		} else if (isSuccessStatus(plainText)) {
+			coloredDot = theme.fg("success", symbol);
+		} else {
+			coloredDot = theme.fg("dim", symbol);
+		}
+
+		return `${coloredDot} ${sanitized}`;
 	}
 
 	render(width: number): string[] {
@@ -201,11 +261,12 @@ export class FooterComponent implements Component {
 		const lines = [pwdLine, dimStatsLeft + dimRemainder];
 
 		// Add extension statuses on a single line, sorted by key alphabetically
+		// Prepend colored status indicator dots: ⊙ for MCP/external services, • for general status
 		const extensionStatuses = this.footerData.getExtensionStatuses();
 		if (extensionStatuses.size > 0) {
 			const sortedStatuses = Array.from(extensionStatuses.entries())
 				.sort(([a], [b]) => a.localeCompare(b))
-				.map(([, text]) => sanitizeStatusText(text));
+				.map(([key, text]) => this.formatStatusWithDot(key, text));
 			const statusLine = sortedStatuses.join(" ");
 			// Truncate to terminal width with dim ellipsis for consistency with footer style
 			lines.push(truncateToWidth(statusLine, width, theme.fg("dim", "...")));

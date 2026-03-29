@@ -19,7 +19,7 @@ import {
 } from "./edit-diff.js";
 import { withFileMutationQueue } from "./file-mutation-queue.js";
 import { resolveToCwd } from "./path-utils.js";
-import { invalidArgText, shortenPath, str } from "./render-utils.js";
+import { getToolStatusIcon, invalidArgText, shortenPath, str } from "./render-utils.js";
 import { wrapToolDefinition } from "./tool-definition-wrapper.js";
 
 type EditRenderState = {
@@ -383,7 +383,8 @@ export function createEditToolDefinition(
 				}
 			}
 			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
-			text.setText(formatEditCall(args, context.state, theme));
+			const icon = getToolStatusIcon(context.isPartial, context.isError, theme);
+			text.setText(`${icon} ${formatEditCall(args, context.state, theme)}`);
 			return text;
 		},
 		renderResult(result, _options, theme, context) {

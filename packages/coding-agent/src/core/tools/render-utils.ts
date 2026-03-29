@@ -62,3 +62,17 @@ export type ToolRenderResultLike<TDetails> = {
 export function invalidArgText(theme: { fg: (name: any, text: string) => string }): string {
 	return theme.fg("error", "[invalid arg]");
 }
+
+export function getToolStatusIcon(
+	isPartial: boolean,
+	isError: boolean,
+	theme: { fg: (name: any, text: string) => string },
+): string {
+	if (isPartial) {
+		return theme.fg("muted", "⋯");
+	}
+	if (isError) {
+		return theme.fg("error", "⚠");
+	}
+	return theme.fg("success", "✓");
+}
