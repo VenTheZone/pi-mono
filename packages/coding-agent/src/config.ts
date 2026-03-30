@@ -112,10 +112,13 @@ export function getThemesDir(): string {
 	if (isBunBinary) {
 		return join(dirname(process.execPath), "theme");
 	}
-	// Theme is in modes/interactive/theme/ relative to src/ or dist/
-	const packageDir = getPackageDir();
-	const srcOrDist = existsSync(join(packageDir, "src")) ? "src" : "dist";
-	return join(packageDir, srcOrDist, "modes", "interactive", "theme");
+	// Theme files are relative to where this code is running from.
+	// When compiled, __dirname is .../dist and themes are in dist/modes/interactive/theme/
+	// When run via tsx, __dirname is .../src and themes are in src/modes/interactive/theme/
+	// Note: We don't use getPackageDir() here because in monorepos it returns the package root,
+	// and we'd end up with dist/dist/... when we append "dist/modes/...".
+	// Instead, we build the path relative to __dirname directly.
+	return join(__dirname, "modes", "interactive", "theme");
 }
 
 /**
@@ -128,9 +131,13 @@ export function getExportTemplateDir(): string {
 	if (isBunBinary) {
 		return join(dirname(process.execPath), "export-html");
 	}
-	const packageDir = getPackageDir();
-	const srcOrDist = existsSync(join(packageDir, "src")) ? "src" : "dist";
-	return join(packageDir, srcOrDist, "core", "export-html");
+	// Export template files are relative to where this code is running from.
+	// When compiled, __dirname is .../dist and templates are in dist/core/export-html/
+	// When run via tsx, __dirname is .../src and templates are in src/core/export-html/
+	// Note: We don't use getPackageDir() here because in monorepos it returns the package root,
+	// and we'd end up with dist/dist/... when we append "dist/core/...".
+	// Instead, we build the path relative to __dirname directly.
+	return join(__dirname, "core", "export-html");
 }
 
 /** Get path to package.json */
