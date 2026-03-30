@@ -1,3 +1,4 @@
+import { truncateToWidth } from "@mariozechner/pi-tui";
 import * as Diff from "diff";
 import { theme } from "../theme/theme.js";
 
@@ -175,14 +176,10 @@ function renderUnifiedDiff(diffText: string): string {
 
 /**
  * Pad a string to a given width, truncating if too long.
+ * Uses truncateToWidth for proper ANSI handling.
  */
 function padOrTruncate(text: string, width: number): string {
-	// Strip ANSI codes for length calculation
-	const stripped = text.replace(/\x1b\[[0-9;]*m/g, "");
-	if (stripped.length > width) {
-		return `${text.slice(0, width - 1)}…`;
-	}
-	return text + " ".repeat(width - stripped.length);
+	return truncateToWidth(text, width, "…", true);
 }
 
 /**

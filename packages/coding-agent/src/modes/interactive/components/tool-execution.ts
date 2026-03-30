@@ -1,7 +1,7 @@
 import { Box, type Component, Container, getCapabilities, Image, Spacer, Text, type TUI } from "@mariozechner/pi-tui";
 import type { ToolDefinition, ToolRenderContext } from "../../../core/extensions/types.js";
 import { allToolDefinitions } from "../../../core/tools/index.js";
-import { getTextOutput as getRenderedTextOutput } from "../../../core/tools/render-utils.js";
+import { getTextOutput as getRenderedTextOutput, getToolStatusIcon } from "../../../core/tools/render-utils.js";
 import { convertToPng } from "../../../utils/image-convert.js";
 import { theme } from "../theme/theme.js";
 
@@ -116,21 +116,8 @@ export class ToolExecutionComponent extends Container {
 		};
 	}
 
-	private getStatusIcon(): string {
-		if (this.isPartial) {
-			// Pending - show animated dots indicator
-			return theme.fg("muted", "⋯");
-		}
-		if (this.result?.isError) {
-			// Error
-			return theme.fg("error", "⚠");
-		}
-		// Success
-		return theme.fg("success", "✓");
-	}
-
 	private createCallFallback(): Component {
-		const icon = this.getStatusIcon();
+		const icon = getToolStatusIcon(this.isPartial, this.result?.isError ?? false, theme);
 		const name = theme.fg("toolTitle", theme.bold(this.toolName));
 		return new Text(`${icon} ${name}`, 0, 0);
 	}
