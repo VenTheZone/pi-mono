@@ -16,6 +16,7 @@ export { Image, type ImageOptions, type ImageTheme } from "./components/image.js
 export { Input } from "./components/input.js";
 export { Loader } from "./components/loader.js";
 export { type DefaultTextStyle, Markdown, type MarkdownTheme } from "./components/markdown.js";
+export { ScrollableContainer } from "./components/scrollable-container.js";
 export {
 	type SelectItem,
 	SelectList,

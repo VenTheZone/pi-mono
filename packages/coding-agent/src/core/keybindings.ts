@@ -37,6 +37,8 @@ export interface AppKeybindings {
 	"app.session.rename": true;
 	"app.session.delete": true;
 	"app.session.deleteNoninvasive": true;
+	"app.scroll.pageUp": true;
+	"app.scroll.pageDown": true;
 }
 
 export type AppKeybinding = keyof AppKeybindings;
@@ -120,6 +122,14 @@ export const KEYBINDINGS = {
 	"app.session.deleteNoninvasive": {
 		defaultKeys: "ctrl+backspace",
 		description: "Delete session when query is empty",
+	},
+	"app.scroll.pageUp": {
+		defaultKeys: "pageUp",
+		description: "Scroll message area up",
+	},
+	"app.scroll.pageDown": {
+		defaultKeys: "pageDown",
+		description: "Scroll message area down",
 	},
 } as const satisfies KeybindingDefinitions;
 
