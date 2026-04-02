@@ -21,6 +21,7 @@ import type {
 	SlashCommand,
 } from "@mariozechner/pi-tui";
 import {
+	CachedContainer,
 	CombinedAutocompleteProvider,
 	type Component,
 	Container,
@@ -147,7 +148,7 @@ export interface InteractiveModeOptions {
 export class InteractiveMode {
 	private session: AgentSession;
 	private ui: TUI;
-	private chatContainer: Container;
+	private chatContainer: CachedContainer;
 	private pendingMessagesContainer: Container;
 	private statusContainer: Container;
 	private defaultEditor: CustomEditor;
@@ -263,7 +264,7 @@ export class InteractiveMode {
 		this.ui = new TUI(new ProcessTerminal(), this.settingsManager.getShowHardwareCursor());
 		this.ui.setClearOnShrink(this.settingsManager.getClearOnShrink());
 		this.headerContainer = new Container();
-		this.chatContainer = new Container();
+		this.chatContainer = new CachedContainer();
 		this.pendingMessagesContainer = new Container();
 		this.statusContainer = new Container();
 		this.widgetContainerAbove = new Container();
@@ -2527,7 +2528,13 @@ export class InteractiveMode {
 		const last = children.length > 0 ? children[children.length - 1] : undefined;
 		const secondLast = children.length > 1 ? children[children.length - 2] : undefined;
 
-		if (last && secondLast && last === this.lastStatusText && secondLast === this.lastStatusSpacer) {
+		if (
+			last &&
+			secondLast &&
+			last === this.lastStatusText &&
+			secondLast === this.lastStatusSpacer &&
+			this.lastStatusText
+		) {
 			this.lastStatusText.setText(theme.fg("dim", message));
 			this.ui.requestRender();
 			return;

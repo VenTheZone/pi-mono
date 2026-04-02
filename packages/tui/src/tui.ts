@@ -37,6 +37,14 @@ export interface Component {
 	 * Called when theme changes or when component needs to re-render from scratch.
 	 */
 	invalidate(): void;
+
+	/**
+	 * When true, signals that this component's output is stable and won't change
+	 * between renders (e.g., completed messages). CachedContainer uses this to
+	 * skip re-rendering the child entirely after the first render.
+	 * Default is false.
+	 */
+	isStatic?: boolean;
 }
 
 type InputListenerResult = { consume?: boolean; data?: string } | undefined;
@@ -176,6 +184,8 @@ export interface OverlayHandle {
  */
 export class Container implements Component {
 	children: Component[] = [];
+	/** When true, signals that this component's output is stable. CachedContainer uses this to skip re-rendering. */
+	isStatic?: boolean;
 
 	addChild(component: Component): void {
 		this.children.push(component);
@@ -204,6 +214,78 @@ export class Container implements Component {
 			lines.push(...child.render(width));
 		}
 		return lines;
+	}
+}
+
+/**
+ * CachedContainer - Container subclass that caches rendered output per child.
+ * Only re-renders children that are dirty (via invalidate() call) or whose width changed.
+ * Children with isStatic=true are never re-rendered after their first render.
+ *
+ * This is the primary anti-glitch mechanism: completed messages in the chat
+ * don't re-render on every streaming delta, reducing differential render work.
+ */
+export class CachedContainer extends Container {
+	/** Per-child cached render output, keyed by child reference */
+	private cache = new WeakMap<Component, { lines: string[]; width: number }>();
+	/** Set of children that need re-rendering (dirty flag) */
+	private dirty = new Set<Component>();
+
+	override invalidate(): void {
+		// Mark all non-static children as dirty so they re-render
+		for (const child of this.children) {
+			if (!child.isStatic) {
+				this.dirty.add(child);
+				child.invalidate?.();
+			}
+		}
+	}
+
+	/**
+	 * Mark a specific child as needing re-render on next render cycle.
+	 * Call this when the child's content has changed.
+	 */
+	markDirty(child: Component): void {
+		this.dirty.add(child);
+	}
+
+	override render(width: number): string[] {
+		const lines: string[] = [];
+		for (const child of this.children) {
+			// Static children: never re-render after first render
+			if (child.isStatic) {
+				const cached = this.cache.get(child);
+				if (cached) {
+					lines.push(...cached.lines);
+					continue;
+				}
+			}
+
+			// Check if we can use cached output
+			const cached = this.cache.get(child);
+			if (cached && cached.width === width && !this.dirty.has(child)) {
+				lines.push(...cached.lines);
+				continue;
+			}
+
+			// Re-render the child
+			const childLines = child.render(width);
+			this.cache.set(child, { lines: childLines, width });
+			this.dirty.delete(child);
+			lines.push(...childLines);
+		}
+		return lines;
+	}
+
+	override clear(): void {
+		super.clear();
+		this.dirty.clear();
+		// Note: WeakMap entries are GC'd automatically when children are removed
+	}
+
+	override removeChild(component: Component): void {
+		super.removeChild(component);
+		this.dirty.delete(component);
 	}
 }
 
