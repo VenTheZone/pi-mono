@@ -53,6 +53,7 @@ export class AssistantMessageComponent extends Container {
 	private contentContainer: Container;
 	private hideThinkingBlock: boolean;
 	private markdownTheme: MarkdownTheme;
+	private hiddenThinkingLabel: string;
 	private lastMessage?: AssistantMessage;
 	private showEndMarker = false;
 	private userTimestamp?: number;
@@ -61,11 +62,13 @@ export class AssistantMessageComponent extends Container {
 		message?: AssistantMessage,
 		hideThinkingBlock = false,
 		markdownTheme: MarkdownTheme = getMarkdownTheme(),
+		hiddenThinkingLabel = "Thinking...",
 	) {
 		super();
 
 		this.hideThinkingBlock = hideThinkingBlock;
 		this.markdownTheme = markdownTheme;
+		this.hiddenThinkingLabel = hiddenThinkingLabel;
 
 		// Container for text/thinking content
 		this.contentContainer = new Container();
@@ -97,6 +100,16 @@ export class AssistantMessageComponent extends Container {
 
 	setHideThinkingBlock(hide: boolean): void {
 		this.hideThinkingBlock = hide;
+		if (this.lastMessage) {
+			this.updateContent(this.lastMessage);
+		}
+	}
+
+	setHiddenThinkingLabel(label: string): void {
+		this.hiddenThinkingLabel = label;
+		if (this.lastMessage) {
+			this.updateContent(this.lastMessage);
+		}
 	}
 
 	updateContent(message: AssistantMessage): void {
@@ -128,8 +141,10 @@ export class AssistantMessageComponent extends Container {
 					.some((c) => (c.type === "text" && c.text.trim()) || (c.type === "thinking" && c.thinking.trim()));
 
 				if (this.hideThinkingBlock) {
-					// Show static "Thinking..." label when hidden
-					this.contentContainer.addChild(new Text(theme.fg("thinkingText", theme.italic("Thinking...")), 1, 0));
+					// Show static thinking label when hidden
+					this.contentContainer.addChild(
+						new Text(theme.italic(theme.fg("thinkingText", this.hiddenThinkingLabel)), 1, 0),
+					);
 					if (hasVisibleContentAfter) {
 						this.contentContainer.addChild(new Spacer(1));
 					}
