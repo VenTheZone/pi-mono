@@ -29,6 +29,7 @@ import {
 	Markdown,
 	matchesKey,
 	ProcessTerminal,
+	ScrollableContainer,
 	Spacer,
 	setKeybindings,
 	Text,
@@ -148,6 +149,7 @@ export class InteractiveMode {
 	private session: AgentSession;
 	private ui: TUI;
 	private chatContainer: Container;
+	private scrollableChatContainer!: ScrollableContainer;
 	private pendingMessagesContainer: Container;
 	private statusContainer: Container;
 	private defaultEditor: CustomEditor;
@@ -508,7 +510,8 @@ export class InteractiveMode {
 			}
 		}
 
-		this.ui.addChild(this.chatContainer);
+		this.scrollableChatContainer = new ScrollableContainer(this.chatContainer, () => this.getMessageAreaHeight());
+		this.ui.addChild(this.scrollableChatContainer);
 		this.ui.addChild(this.pendingMessagesContainer);
 		this.ui.addChild(this.statusContainer);
 		this.renderWidgets(); // Initialize with default spacer
@@ -2006,6 +2009,39 @@ export class InteractiveMode {
 		this.defaultEditor.onPasteImage = () => {
 			this.handleClipboardImagePaste();
 		};
+
+		// Scroll key handlers
+		this.defaultEditor.onAction("app.scroll.pageUp", () => this.handleScrollUp());
+		this.defaultEditor.onAction("app.scroll.pageDown", () => this.handleScrollDown());
+	}
+
+	/**
+	 * Calculate the visible height of the message area.
+	 * Terminal height minus header, editor, footer, and misc spacing.
+	 */
+	private getMessageAreaHeight(): number {
+		const terminalHeight = this.ui.terminal.rows;
+		// Reserved lines: header (~15), editor (~3), footer (~1), misc (~3) = ~22
+		const reservedLines = 22;
+		return Math.max(1, terminalHeight - reservedLines);
+	}
+
+	/**
+	 * Handle PageUp - scroll up by half the visible area.
+	 */
+	private handleScrollUp(): void {
+		const pageLines = Math.max(1, Math.floor(this.getMessageAreaHeight() / 2));
+		this.scrollableChatContainer.scrollUp(pageLines);
+		this.ui.requestRender();
+	}
+
+	/**
+	 * Handle PageDown - scroll down by half the visible area.
+	 */
+	private handleScrollDown(): void {
+		const pageLines = Math.max(1, Math.floor(this.getMessageAreaHeight() / 2));
+		this.scrollableChatContainer.scrollDown(pageLines);
+		this.ui.requestRender();
 	}
 
 	private async handleClipboardImagePaste(): Promise<void> {
